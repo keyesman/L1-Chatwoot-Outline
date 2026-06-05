@@ -118,6 +118,27 @@ def get_resolve_count(messages):
     return count
 
 
+def get_last_resolved_at(messages, created_at):
+    # Ambil semua activity message yang berisi kata 'resolved'
+    resolved_messages = [
+        m for m in messages
+        if m.get("message_type") == 2
+        and "resolved" in (m.get("content") or "").lower()
+    ]
+
+    if not resolved_messages:
+        return None
+
+    # Ambil yang paling terakhir (last resolve)
+    last_resolved_msg = resolved_messages[-1]
+    resolved_at       = last_resolved_msg.get("created_at")
+
+    if resolved_at and created_at:
+        return resolved_at - created_at  # dalam detik
+
+    return None
+
+
 def get_conversation_report(date_from=None, date_to=None):
     print("=" * 80)
     print("  CHATWOOT CONVERSATION REPORT")
@@ -155,9 +176,8 @@ def get_conversation_report(date_from=None, date_to=None):
         resolve_count = get_resolve_count(messages)
         is_reopened   = resolve_count > 1
 
-        # Last resolution time: updated_at conversation (saat terakhir di-resolve)
-        updated_at = conv.get("updated_at")
-        last_rt    = (updated_at - created_at) if updated_at and created_at else None
+        # Last resolution time: dari activity message resolved (akurat)
+        last_rt = get_last_resolved_at(messages, created_at)
 
         rows.append([
             "#" + str(conv_id),
