@@ -30,17 +30,15 @@ def seconds_to_human(seconds):
         return str(secs) + "s"
 
 
-def get_all_conversations(date_from=None, date_to=None):
+def get_conversations_by_status(status, date_from=None, date_to=None):
     all_conversations = []
     page              = 1
     stop_pagination   = False
 
-    print("[INFO] Mengambil data conversations...")
-
     while not stop_pagination:
         params = {
             "page": page,
-            "status": "resolved"
+            "status": status
         }
         response = requests.get(
             BASE_URL + "/api/v1/accounts/" + str(ACCOUNT_ID) + "/conversations",
@@ -50,7 +48,6 @@ def get_all_conversations(date_from=None, date_to=None):
         )
 
         if response.status_code != 200:
-            print("[GAGAL] Gagal ambil conversations. Status: " + str(response.status_code))
             break
 
         data          = response.json()
@@ -63,21 +60,31 @@ def get_all_conversations(date_from=None, date_to=None):
             created_at = conv.get("created_at")
             if created_at:
                 conv_date = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d")
-
-                # Kalau sudah lebih tua dari date_from, tandai stop setelah page ini selesai
                 if date_from and conv_date < date_from:
                     stop_pagination = True
                     continue
-
-                # Skip kalau lebih baru dari date_to
                 if date_to and conv_date > date_to:
                     continue
-
             all_conversations.append(conv)
 
-        print("[INFO] Page " + str(page) + " -> ditemukan " + str(len(all_conversations)) + " conversations dalam range...")
         page += 1
 
+    return all_conversations
+
+
+def get_all_conversations(date_from=None, date_to=None):
+    all_conversations = []
+
+    for status in ["open", "resolved", "pending", "snoozed"]:
+        print("[INFO] Mengambil status: " + status + "...")
+        convs = get_conversations_by_status(status, date_from, date_to)
+        print("[INFO] -> ditemukan " + str(len(convs)) + " conversations")
+        for conv in convs:
+            conv["_status"] = status  # tandai status aslinya
+        all_conversations.extend(convs)
+
+    # Sort by created_at descending
+    all_conversations.sort(key=lambda x: x.get("created_at", 0), reverse=True)
     return all_conversations
 
 
@@ -160,6 +167,7 @@ def get_conversation_report(date_from=None, date_to=None):
         rows.append([
             "#" + str(conv_id),
             created_dt,
+            conv.get("_status", "-").upper(),
             agent_name,
             labels_str,
             seconds_to_human(frt),
@@ -172,6 +180,7 @@ def get_conversation_report(date_from=None, date_to=None):
     headers = [
         "Ticket ID",
         "Created At",
+        "Status",
         "Agent",
         "Labels",
         "First Resp Time",
