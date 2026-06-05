@@ -22,12 +22,7 @@ def seconds_to_human(seconds):
     hours   = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs    = seconds % 60
-    if hours > 0:
-        return str(hours) + "h " + str(minutes) + "m " + str(secs) + "s"
-    elif minutes > 0:
-        return str(minutes) + "m " + str(secs) + "s"
-    else:
-        return str(secs) + "s"
+    return str(hours).zfill(2) + ":" + str(minutes).zfill(2) + ":" + str(secs).zfill(2)
 
 
 def get_conversations_by_status(status, date_from=None, date_to=None):
@@ -103,7 +98,7 @@ def get_last_note(messages):
     private_notes = [m for m in messages if m.get("private") is True]
     if not private_notes:
         return "-"
-    content = private_notes[-1].get("content", "-")
+    content = private_notes[-1].get("content") or "-"
     # Hapus newline agar tidak bikin gap di tabel
     content = content.replace("\n", " ").replace("\r", " ").strip()
     if content and len(content) > 50:
