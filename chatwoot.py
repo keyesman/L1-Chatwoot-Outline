@@ -32,10 +32,12 @@ def seconds_to_human(seconds):
 
 def get_all_conversations(date_from=None, date_to=None):
     all_conversations = []
-    page = 1
+    page              = 1
+    stop_pagination   = False
+
     print("[INFO] Mengambil data conversations...")
 
-    while True:
+    while not stop_pagination:
         params = {
             "page": page,
             "status": "resolved"
@@ -61,18 +63,20 @@ def get_all_conversations(date_from=None, date_to=None):
             created_at = conv.get("created_at")
             if created_at:
                 conv_date = datetime.fromtimestamp(created_at).strftime("%Y-%m-%d")
+
+                # Kalau sudah lebih tua dari date_from, tandai stop setelah page ini selesai
                 if date_from and conv_date < date_from:
-                    return all_conversations
+                    stop_pagination = True
+                    continue
+
+                # Skip kalau lebih baru dari date_to
                 if date_to and conv_date > date_to:
                     continue
+
             all_conversations.append(conv)
 
-        print("[INFO] Page " + str(page) + " -> " + str(len(conversations)) + " conversations diambil...")
+        print("[INFO] Page " + str(page) + " -> ditemukan " + str(len(all_conversations)) + " conversations dalam range...")
         page += 1
-
-        total_count = data.get("data", {}).get("meta", {}).get("all_count", 0)
-        if len(all_conversations) >= total_count:
-            break
 
     return all_conversations
 
